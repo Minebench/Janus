@@ -39,6 +39,7 @@ public class Main extends JavaPlugin implements Listener {
         getConfig().options().copyDefaults(true);
         saveConfig();
         blockMessages = getConfig().getBoolean("blockMessages");
+        noPermission = getConfig().getString("noPermission");
     }
 
     @EventHandler
@@ -73,10 +74,10 @@ public class Main extends JavaPlugin implements Listener {
                     Block relative = block.getRelative(bf);
                     if (relative.getType() == SIGN) {
                         Sign sign = (Sign) relative.getState();
-                        if (sign.getLine(0).equals(IDENTIFIER)) {
+                        if (sign.getLine(0).toLowerCase().equals(IDENTIFIER)) {
                             //
                         	if(!event.getPlayer().hasPermission("janus.sign")) {
-                        		event.getPlayer().sendMessage(noPermission);
+                        		event.getPlayer().sendMessage(ChatColor.RED + noPermission);
                         		break;
                         	}
                             event.setCancelled(true);
