@@ -87,7 +87,7 @@ public class Main extends JavaPlugin implements Listener {
                         Sign sign = (Sign) relative.getState();
                         if (sign.getLine(0).toLowerCase().equals("[" + signIdentifier + "]")) {
                             //
-                        	if(!event.getPlayer().hasPermission("janus.sign")) {
+                        	if(!event.getPlayer().hasPermission("janus.use")) {
                         		event.getPlayer().sendMessage(ChatColor.RED + noPermission);
                         		break;
                         	}
