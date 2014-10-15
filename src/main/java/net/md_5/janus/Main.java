@@ -28,12 +28,14 @@ public class Main extends JavaPlugin implements Listener {
     private static final Material SIGN = Material.WALL_SIGN;
     private static final String IDENTIFIER = "[server]";
     private boolean blockMessages = false;
+    private String noPermission = "You don't have permission to use Server Portals!";
 
     @Override
     public void onEnable() {
         Bukkit.getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         getServer().getPluginManager().registerEvents(this, this);
         getConfig().addDefault("blockMessages", blockMessages);
+        getConfig().addDefault("noPermission", noPermission);
         getConfig().options().copyDefaults(true);
         saveConfig();
         blockMessages = getConfig().getBoolean("blockMessages");
@@ -55,7 +57,7 @@ public class Main extends JavaPlugin implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onSignChange(SignChangeEvent event) {
-        if (event.getLine(0).equals(IDENTIFIER) && !event.getPlayer().isOp()) {
+        if (event.getLine(0).toLowerCase().equals(IDENTIFIER) && !event.getPlayer().hasPermission("janus.sign")) {
             event.getPlayer().sendMessage(ChatColor.RED + "You are not allowed to do that!");
             event.setCancelled(true);
         }
@@ -73,6 +75,10 @@ public class Main extends JavaPlugin implements Listener {
                         Sign sign = (Sign) relative.getState();
                         if (sign.getLine(0).equals(IDENTIFIER)) {
                             //
+                        	if(!event.getPlayer().hasPermission("janus.sign")) {
+                        		event.getPlayer().sendMessage(noPermission);
+                        		break;
+                        	}
                             event.setCancelled(true);
                             Location location = event.getPlayer().getLocation();
                             float yaw = location.getYaw();

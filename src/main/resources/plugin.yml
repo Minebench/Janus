@@ -1,7 +1,16 @@
-name: ${project.name}
-version: ${build.number}
-description: ${project.description}
+name: Janus
+version: 1.2
+description: The plugin portion of the Elastic Teleport Suite.
 author: md_5
-website: ${project.url}
+authors: [Phoenix616]
+website: https://github.com/Phoenix616/Janus
 
-main: ${main.class}
+main: net.md_5.janus.Main
+
+permissions:
+   janus.sign:
+      description: Gives access to the server signs
+      default: op
+   janus.use:
+      description: Gives access to the server portals
+      default: op
