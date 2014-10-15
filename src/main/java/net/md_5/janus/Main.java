@@ -95,7 +95,7 @@ public class Main extends JavaPlugin implements Listener {
                             Location location = event.getPlayer().getLocation();                            
                             if(portalDistance > 0) {
                             	Vector vec = location.getDirection().multiply(portalDistance);
-                            	location = location.add(vec);
+                            	location = location.add(vec.multiply(-1));
                             }
                             if(portalTurnPlayer) {
                             	float yaw = location.getYaw();
