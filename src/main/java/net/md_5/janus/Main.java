@@ -5,6 +5,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -19,13 +20,17 @@ import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.util.Vector;
 
 public class Main extends JavaPlugin implements Listener {
 
     private static final Material FRAME = Material.OBSIDIAN;
     private static final Material PORTAL = Material.PORTAL;
     private static final Material SIGN = Material.WALL_SIGN;
+    private boolean portalTurnPlayer = false;
+    private int portalDistance = 3;
     private boolean blockMessages = false;
     private String noPermission = "You don't have permission to use Server Portals!";
     private String signIdentifier = "server";
@@ -34,11 +39,15 @@ public class Main extends JavaPlugin implements Listener {
     public void onEnable() {
         Bukkit.getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         getServer().getPluginManager().registerEvents(this, this);
+        getConfig().addDefault("portalTurnPlayer", portalTurnPlayer);
+        getConfig().addDefault("portalDistance", portalDistance);
         getConfig().addDefault("blockMessages", blockMessages);
         getConfig().addDefault("noPermission", noPermission);
         getConfig().addDefault("signIdentifier", signIdentifier);
         getConfig().options().copyDefaults(true);
         saveConfig();
+        portalTurnPlayer = getConfig().getBoolean("portalFlippPlayer");
+        portalDistance = getConfig().getInt("portalDistance");
         blockMessages = getConfig().getBoolean("blockMessages");
         noPermission = getConfig().getString("noPermission");
         signIdentifier = getConfig().getString("signIdentifier").toLowerCase();
@@ -83,13 +92,19 @@ public class Main extends JavaPlugin implements Listener {
                         		break;
                         	}
                             event.setCancelled(true);
-                            Location location = event.getPlayer().getLocation();
-                            float yaw = location.getYaw();
-                            if ((yaw += 180) > 360) {
-                                yaw -= 360;
+                            Location location = event.getPlayer().getLocation();                            
+                            if(portalDistance > 0) {
+                            	Vector vec = location.getDirection().multiply(portalDistance);
+                            	location = location.add(vec);
                             }
-                            location.setYaw(yaw);
-                            event.getPlayer().teleport(location);
+                            if(portalTurnPlayer) {
+                            	float yaw = location.getYaw();
+	                            if ((yaw += 180) > 360) {
+	                                yaw -= 360;
+	                            }
+	                            location.setYaw(yaw);
+                            }
+                            event.getPlayer().teleport(location, TeleportCause.PLUGIN);
                             ByteArrayOutputStream b = new ByteArrayOutputStream();
                             DataOutputStream out = new DataOutputStream(b);
                             try {
