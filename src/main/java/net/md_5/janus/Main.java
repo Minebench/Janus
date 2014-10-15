@@ -26,9 +26,9 @@ public class Main extends JavaPlugin implements Listener {
     private static final Material FRAME = Material.OBSIDIAN;
     private static final Material PORTAL = Material.PORTAL;
     private static final Material SIGN = Material.WALL_SIGN;
-    private static final String IDENTIFIER = "[server]";
     private boolean blockMessages = false;
     private String noPermission = "You don't have permission to use Server Portals!";
+    private String signIdentifier = "server";
 
     @Override
     public void onEnable() {
@@ -36,10 +36,12 @@ public class Main extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         getConfig().addDefault("blockMessages", blockMessages);
         getConfig().addDefault("noPermission", noPermission);
+        getConfig().addDefault("signIdentifier", signIdentifier);
         getConfig().options().copyDefaults(true);
         saveConfig();
         blockMessages = getConfig().getBoolean("blockMessages");
         noPermission = getConfig().getString("noPermission");
+        signIdentifier = getConfig().getString("signIdentifier").toLowerCase();
     }
 
     @EventHandler
@@ -58,7 +60,7 @@ public class Main extends JavaPlugin implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onSignChange(SignChangeEvent event) {
-        if (event.getLine(0).toLowerCase().equals(IDENTIFIER) && !event.getPlayer().hasPermission("janus.sign")) {
+        if (event.getLine(0).toLowerCase().equals("[" + signIdentifier + "]") && !event.getPlayer().hasPermission("janus.sign")) {
             event.getPlayer().sendMessage(ChatColor.RED + "You are not allowed to do that!");
             event.setCancelled(true);
         }
@@ -74,7 +76,7 @@ public class Main extends JavaPlugin implements Listener {
                     Block relative = block.getRelative(bf);
                     if (relative.getType() == SIGN) {
                         Sign sign = (Sign) relative.getState();
-                        if (sign.getLine(0).toLowerCase().equals(IDENTIFIER)) {
+                        if (sign.getLine(0).toLowerCase().equals("[" + signIdentifier + "]")) {
                             //
                         	if(!event.getPlayer().hasPermission("janus.sign")) {
                         		event.getPlayer().sendMessage(ChatColor.RED + noPermission);
