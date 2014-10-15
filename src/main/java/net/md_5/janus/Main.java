@@ -23,9 +23,9 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class Main extends JavaPlugin implements Listener {
 
-    private static final int FRAME = Material.OBSIDIAN.getId();
-    private static final int PORTAL = Material.PORTAL.getId();
-    private static final int SIGN = Material.WALL_SIGN.getId();
+    private static final Material FRAME = Material.OBSIDIAN;
+    private static final Material PORTAL = Material.PORTAL;
+    private static final Material SIGN = Material.WALL_SIGN;
     private static final String IDENTIFIER = "[server]";
     private boolean blockMessages = false;
 
@@ -65,11 +65,11 @@ public class Main extends JavaPlugin implements Listener {
     public void onPlayerMove(PlayerMoveEvent event) {
         Location to = event.getTo();
         World world = to.getWorld();
-        if (world.getBlockTypeIdAt(to) == PORTAL && world.getBlockTypeIdAt(event.getFrom()) != PORTAL) {
+        if (world.getBlockAt(to).getType() == PORTAL && world.getBlockAt(event.getFrom()).getType() != PORTAL) {
             for (Block block : getPortalNear(world, to.getBlockX(), to.getBlockY(), to.getBlockZ())) {
                 for (BlockFace bf : BlockFace.values()) {
                     Block relative = block.getRelative(bf);
-                    if (relative.getTypeId() == SIGN) {
+                    if (relative.getType() == SIGN) {
                         Sign sign = (Sign) relative.getState();
                         if (sign.getLine(0).equals(IDENTIFIER)) {
                             //
@@ -103,16 +103,16 @@ public class Main extends JavaPlugin implements Listener {
     private Set<Block> getPortalNear(World world, int x, int y, int z) {
         byte b0 = 0;
         byte b1 = 0;
-        if (world.getBlockTypeIdAt(x - 1, y, z) == FRAME || world.getBlockTypeIdAt(x + 1, y, z) == FRAME) {
+        if (world.getBlockAt(x - 1, y, z).getType() == FRAME || world.getBlockAt(x + 1, y, z).getType() == FRAME) {
             b0 = 1;
         }
-        if (world.getBlockTypeIdAt(x, y, z - 1) == FRAME || world.getBlockTypeIdAt(x, y, z + 1) == FRAME) {
+        if (world.getBlockAt(x, y, z - 1).getType() == FRAME || world.getBlockAt(x, y, z + 1).getType() == FRAME) {
             b1 = 1;
         }
 
         Set<Block> blocks = new HashSet<Block>();
 
-        if (world.getBlockTypeIdAt(x - b0, y, z - b1) == 0) {
+        if (world.getBlockAt(x - b0, y, z - b1).getType() == Material.AIR) {
             x -= b0;
             z -= b1;
         }
