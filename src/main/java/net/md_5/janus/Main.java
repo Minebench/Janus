@@ -1,10 +1,12 @@
 package net.md_5.janus;
 
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -14,11 +16,13 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.entity.EntityPortalEnterEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -27,7 +31,6 @@ import org.bukkit.util.Vector;
 public class Main extends JavaPlugin implements Listener {
 
     private static final Material FRAME = Material.OBSIDIAN;
-    private static final Material PORTAL = Material.PORTAL;
     private static final Material SIGN = Material.WALL_SIGN;
     private boolean portalTurnPlayer = false;
     private int portalDistance = 3;
@@ -35,6 +38,8 @@ public class Main extends JavaPlugin implements Listener {
     private String noPermission = "You don't have permission to use Server Portals!";
     private String signIdentifier = "server";
 
+	HashSet<UUID> enteredPortal = new HashSet<UUID>();
+	
     @Override
     public void onEnable() {
         Bukkit.getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
@@ -48,6 +53,7 @@ public class Main extends JavaPlugin implements Listener {
         saveConfig();
         portalTurnPlayer = getConfig().getBoolean("portalFlippPlayer");
         portalDistance = getConfig().getInt("portalDistance");
+        if(portalDistance < 1) portalDistance = 1;
         blockMessages = getConfig().getBoolean("blockMessages");
         noPermission = getConfig().getString("noPermission");
         signIdentifier = getConfig().getString("signIdentifier").toLowerCase();
@@ -75,56 +81,69 @@ public class Main extends JavaPlugin implements Listener {
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onPlayerMove(PlayerMoveEvent event) {
-        Location to = event.getTo();
-        World world = to.getWorld();
-        if (world.getBlockAt(to).getType() == PORTAL && world.getBlockAt(event.getFrom()).getType() != PORTAL) {
-            for (Block block : getPortalNear(world, to.getBlockX(), to.getBlockY(), to.getBlockZ())) {
-                for (BlockFace bf : BlockFace.values()) {
-                    Block relative = block.getRelative(bf);
-                    if (relative.getType() == SIGN) {
-                        Sign sign = (Sign) relative.getState();
-                        if (sign.getLine(0).toLowerCase().equals("[" + signIdentifier + "]")) {
-                            //
-                        	if(!event.getPlayer().hasPermission("janus.use")) {
-                        		event.getPlayer().sendMessage(ChatColor.RED + noPermission);
-                        		break;
-                        	}
-                            event.setCancelled(true);
-                            Location location = event.getPlayer().getLocation();                            
-                            if(portalDistance > 0) {
-                            	Vector vec = location.getDirection().multiply(portalDistance);
-                            	location = location.add(vec.multiply(-1));
-                            }
-                            if(portalTurnPlayer) {
-                            	float yaw = location.getYaw();
-	                            if ((yaw += 180) > 360) {
-	                                yaw -= 360;
-	                            }
-	                            location.setYaw(yaw);
-                            }
-                            event.getPlayer().teleport(location, TeleportCause.PLUGIN);
-                            ByteArrayOutputStream b = new ByteArrayOutputStream();
-                            DataOutputStream out = new DataOutputStream(b);
-                            try {
-                                out.writeUTF("Connect");
-                                out.writeUTF(sign.getLine(1));
-                            } catch (IOException ex) {
-                                // Impossible
-                            }
-
-                            event.getPlayer().sendPluginMessage(this, "BungeeCord", b.toByteArray());
-                            break;
-                            //
-                        }
-                    }
-                }
-            }
+    @EventHandler
+    public void onPlayerPortalEnter(EntityPortalEnterEvent event) {
+    	if(event.getEntityType() == EntityType.PLAYER) {
+    		final UUID id = event.getEntity().getUniqueId();
+			if(!enteredPortal.contains(id)) {
+				enteredPortal.add(id);
+		        for (Block block : getPortalNear(event.getLocation())) {
+		            for (BlockFace bf : BlockFace.values()) {
+		                Block relative = block.getRelative(bf);
+		                if (relative.getType() == SIGN) {
+		                    Sign sign = (Sign) relative.getState();
+		                    if (sign.getLine(0).toLowerCase().equals("[" + signIdentifier + "]")) {
+		                        //
+		                    	Player player = (Player) event.getEntity();
+		                    	if(!player.hasPermission("janus.use")) {
+		                    		player.sendMessage(ChatColor.RED + noPermission);
+		                    		break;
+		                    	}
+		                    	Location location = player.getLocation();
+	        	            	float originalPitch = location.getPitch();
+	        	            	location.setPitch(0);
+	        	            	Vector vec = location.getDirection().multiply(portalDistance);
+	        	            	location = location.add(vec.multiply(-1));
+	        	            	location.setPitch(originalPitch);
+		                        if(portalTurnPlayer) {
+		                        	float yaw = location.getYaw();
+		                            if ((yaw += 180) > 360) {
+		                                yaw -= 360;
+		                            }
+		                            location.setYaw(yaw);
+		                        }
+		                        player.teleport(location, TeleportCause.PLUGIN);
+		                        ByteArrayOutputStream b = new ByteArrayOutputStream();
+		                        DataOutputStream out = new DataOutputStream(b);
+		                        try {
+		                            out.writeUTF("Connect");
+		                            out.writeUTF(sign.getLine(1));
+		                        } catch (IOException ex) {
+		                            // Impossible
+		                        }
+		
+		                        player.sendPluginMessage(this, "BungeeCord", b.toByteArray());
+		                        break;
+		                        //
+		                    }
+		                }
+		            }
+		        }		        
+		        Bukkit.getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+            		@Override
+            		public void run() {
+            			enteredPortal.remove(id);
+            		}
+		        }, 20L);
+	        }
         }
     }
 
-    private Set<Block> getPortalNear(World world, int x, int y, int z) {
+    private Set<Block> getPortalNear(Location loc) {
+    	World world = loc.getWorld();
+    	int x = loc.getBlockX();
+    	int y = loc.getBlockY();
+    	int z = loc.getBlockZ();
         byte b0 = 0;
         byte b1 = 0;
         if (world.getBlockAt(x - 1, y, z).getType() == FRAME || world.getBlockAt(x + 1, y, z).getType() == FRAME) {
