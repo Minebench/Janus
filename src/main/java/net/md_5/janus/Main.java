@@ -75,7 +75,7 @@ public class Main extends JavaPlugin implements Listener {
         blockMessages = getConfig().getBoolean("blockMessages");
         noPermission = ChatColor.translateAlternateColorCodes('&', getConfig().getString("lang.noPermission"));
         noServerPermission = ChatColor.translateAlternateColorCodes('&', getConfig().getString("lang.noServerPermission"));
-        cooldownMessage = ChatColor.translateAlternateColorCodes('&', getConfig().getString("lang.cooldown"));
+        cooldownMessage = ChatColor.translateAlternateColorCodes('&', getConfig().getString("lang.cooldownMessage"));
         signIdentifier = getConfig().getString("signIdentifier").toLowerCase();
     }
 
