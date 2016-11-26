@@ -3,7 +3,7 @@ version: '${minecraft.plugin.version}'
 description: The plugin portion of the Elastic Teleport Suite.
 author: md_5
 authors: [Phoenix616]
-website: https://github.com/Phoenix616/Janus
+website: https://github.com/Minebench/Janus
 
 main: net.md_5.janus.Main
 
@@ -13,4 +13,10 @@ permissions:
       default: op
    janus.use:
       description: Gives access to the server portals
+      default: true
+   janus.use.*:
+      description: Gives access to all the server portals
+      default: op
+   janus.bypass:
+      description: Gives access to bypass the cooldown
       default: op
