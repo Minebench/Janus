@@ -1,5 +1,5 @@
 name: Janus
-version: 1.3
+version: '${minecraft.plugin.version}'
 description: The plugin portion of the Elastic Teleport Suite.
 author: md_5
 authors: [Phoenix616]
