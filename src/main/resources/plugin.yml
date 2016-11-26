@@ -7,6 +7,13 @@ website: https://github.com/Minebench/Janus
 
 main: net.md_5.janus.Main
 
+commands:
+   janus:
+      description: Main Janus command.
+      usage: /janus reload|info
+      permission: janus.command
+      permission-message: You don't have the permission to execute this command
+
 permissions:
    janus.sign:
       description: Gives access to the server signs
@@ -19,4 +26,7 @@ permissions:
       default: op
    janus.bypass:
       description: Gives access to bypass the cooldown
+      default: op
+   janus.command:
+      description: Gives access to the janus command
       default: op

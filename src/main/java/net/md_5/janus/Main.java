@@ -22,6 +22,8 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -50,6 +52,10 @@ public class Main extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
+        load();
+    }
+
+    private void load() {
         cooldownCache = CacheBuilder.newBuilder().expireAfterWrite(cooldown, TimeUnit.SECONDS).build();
         portalCache = CacheBuilder.newBuilder()
                 .maximumSize(1000)
@@ -70,10 +76,39 @@ public class Main extends JavaPlugin implements Listener {
         portalDistance = getConfig().getInt("portalDistance");
         if(portalDistance < 0) portalDistance = 0;
         cooldown = getConfig().getInt("cooldown");
+        if(cooldown < 1) cooldown = 1;
         blockMessages = getConfig().getBoolean("blockMessages");
         noPermission = ChatColor.translateAlternateColorCodes('&', getConfig().getString("lang.noPermission"));
         noServerPermission = ChatColor.translateAlternateColorCodes('&', getConfig().getString("lang.noServerPermission"));
         signIdentifier = getConfig().getString("signIdentifier").toLowerCase();
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (args.length == 0) {
+            sender.sendMessage(ChatColor.AQUA + getName() + " v" + getDescription().getVersion());
+            return true;
+        } else if ("reload".equalsIgnoreCase(args[0])) {
+            load();
+            sender.sendMessage(ChatColor.YELLOW + getName() + " reloaded!");
+            return true;
+        } else if ("info".equalsIgnoreCase(args[0])) {
+            sender.sendMessage(new String[] {
+                    ChatColor.YELLOW + "Info:",
+                    ChatColor.AQUA + " cooldownCache size: " + ChatColor.YELLOW + cooldownCache.size(),
+                    ChatColor.AQUA + " portalCache size: " + ChatColor.YELLOW + portalCache.size(),
+                    ChatColor.YELLOW + "Config:",
+                    ChatColor.AQUA + " portalTurnPlayer: " + ChatColor.YELLOW + portalTurnPlayer,
+                    ChatColor.AQUA + " portalDistance: " + ChatColor.YELLOW + portalDistance,
+                    ChatColor.AQUA + " blockMessages: " + ChatColor.YELLOW + blockMessages,
+                    ChatColor.AQUA + " cooldown : " + ChatColor.YELLOW + cooldown ,
+                    ChatColor.AQUA + " noPermission: " + ChatColor.YELLOW + noPermission,
+                    ChatColor.AQUA + " noServerPermission: " + ChatColor.YELLOW + noServerPermission,
+                    ChatColor.AQUA + " signIdentifier: " + ChatColor.YELLOW + signIdentifier
+            });
+            return true;
+        }
+        return false;
     }
 
     @EventHandler
@@ -109,10 +144,9 @@ public class Main extends JavaPlugin implements Listener {
         }
 
         Player player = (Player) event.getEntity();
-        if (cooldown > 0
-                && !player.hasPermission("janus.bypass")
-                && cooldownCache.getIfPresent(player.getUniqueId()) != null
-                && cooldownCache.getIfPresent(player.getUniqueId()) + cooldown * 1000 > System.currentTimeMillis()) {
+        int playerCooldown = player.hasPermission("janus.bypass") ? 1 : cooldown;
+        if (cooldownCache.getIfPresent(player.getUniqueId()) != null
+                && cooldownCache.getIfPresent(player.getUniqueId()) + playerCooldown * 1000 > System.currentTimeMillis()) {
             return;
         }
 
