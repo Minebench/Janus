@@ -41,7 +41,6 @@ public class Main extends JavaPlugin implements Listener {
     private int portalDistance = 3;
     private boolean blockMessages = false;
     private int cooldown = 10;
-    private String cooldownMessage = ChatColor.RED + "Please wait %time% more seconds before entering a portal!";
     private String noPermission = "You don't have permission to use Server Portals!";
     private String noServerPermission = "You don't have permission to use the %server% portal!";
     private String signIdentifier = "server";
@@ -64,7 +63,6 @@ public class Main extends JavaPlugin implements Listener {
         getConfig().addDefault("blockMessages", blockMessages);
         getConfig().addDefault("lang.noPermission", noPermission);
         getConfig().addDefault("lang.noServerPermission", noServerPermission);
-        getConfig().addDefault("lang.cooldownMessage", cooldownMessage);
         getConfig().addDefault("signIdentifier", signIdentifier);
         getConfig().options().copyDefaults(true);
         saveConfig();
@@ -75,7 +73,6 @@ public class Main extends JavaPlugin implements Listener {
         blockMessages = getConfig().getBoolean("blockMessages");
         noPermission = ChatColor.translateAlternateColorCodes('&', getConfig().getString("lang.noPermission"));
         noServerPermission = ChatColor.translateAlternateColorCodes('&', getConfig().getString("lang.noServerPermission"));
-        cooldownMessage = ChatColor.translateAlternateColorCodes('&', getConfig().getString("lang.cooldownMessage"));
         signIdentifier = getConfig().getString("signIdentifier").toLowerCase();
     }
 
@@ -112,12 +109,11 @@ public class Main extends JavaPlugin implements Listener {
         }
 
         Player player = (Player) event.getEntity();
-        if (cooldown > 0 && !player.hasPermission("janus.bypass") && cooldownCache.getIfPresent(player.getUniqueId()) != null) {
-            int remaining = (int) (cooldown - (System.currentTimeMillis() - cooldownCache.getIfPresent(player.getUniqueId()) / 1000));
-            if (remaining >= 0) {
-                player.sendMessage(cooldownMessage.replace("%time%", String.valueOf(remaining + 1)));
-                return;
-            }
+        if (cooldown > 0
+                && !player.hasPermission("janus.bypass")
+                && cooldownCache.getIfPresent(player.getUniqueId()) != null
+                && cooldownCache.getIfPresent(player.getUniqueId()) + cooldown * 1000 > System.currentTimeMillis()) {
+            return;
         }
 
         for (Block block : getPortalNear(event.getLocation())) {
@@ -126,6 +122,7 @@ public class Main extends JavaPlugin implements Listener {
                 if (relative.getType() == SIGN) {
                     Sign sign = (Sign) relative.getState();
                     if (sign.getLine(0).toLowerCase().equals("[" + signIdentifier + "]")) {
+                        cooldownCache.put(player.getUniqueId(), System.currentTimeMillis());
                         if(!player.hasPermission("janus.use")) {
                             player.sendMessage(ChatColor.RED + noPermission);
                             break;
@@ -147,8 +144,6 @@ public class Main extends JavaPlugin implements Listener {
                         } catch (IOException ex) {
                             // Impossible
                         }
-
-                        cooldownCache.put(player.getUniqueId(), System.currentTimeMillis());
                         player.sendPluginMessage(this, "BungeeCord", b.toByteArray());
                         break;
                         //
