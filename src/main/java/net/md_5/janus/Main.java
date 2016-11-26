@@ -68,7 +68,7 @@ public class Main extends JavaPlugin implements Listener {
         saveConfig();
         portalTurnPlayer = getConfig().getBoolean("portalTurnPlayer");
         portalDistance = getConfig().getInt("portalDistance");
-        if(portalDistance < 1) portalDistance = 1;
+        if(portalDistance < 0) portalDistance = 0;
         cooldown = getConfig().getInt("cooldown");
         blockMessages = getConfig().getBoolean("blockMessages");
         noPermission = ChatColor.translateAlternateColorCodes('&', getConfig().getString("lang.noPermission"));
@@ -123,12 +123,12 @@ public class Main extends JavaPlugin implements Listener {
                     Sign sign = (Sign) relative.getState();
                     if (sign.getLine(0).toLowerCase().equals("[" + signIdentifier + "]")) {
                         cooldownCache.put(player.getUniqueId(), System.currentTimeMillis());
+                        teleportOutOfPortal(player);
+
                         if(!player.hasPermission("janus.use")) {
                             player.sendMessage(ChatColor.RED + noPermission);
                             break;
                         }
-
-                        teleportOutOfPortal(player);
 
                         String serverName = sign.getLine(1);
                         if (!player.hasPermission("janus.use." + serverName.toLowerCase())) {
@@ -167,6 +167,9 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     private void teleportOutOfPortal(Player player) {
+        if (portalDistance == 0) {
+            return;
+        }
         Location location = player.getLocation();
         float originalPitch = location.getPitch();
         location.setPitch(0);
