@@ -72,6 +72,7 @@ public class Main extends JavaPlugin implements Listener {
         getConfig().addDefault("signIdentifier", signIdentifier);
         getConfig().options().copyDefaults(true);
         saveConfig();
+        reloadConfig();
         portalTurnPlayer = getConfig().getBoolean("portalTurnPlayer");
         portalDistance = getConfig().getInt("portalDistance");
         if(portalDistance < 0) portalDistance = 0;
