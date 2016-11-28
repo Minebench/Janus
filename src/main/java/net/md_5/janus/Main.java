@@ -6,12 +6,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
-import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -47,7 +45,7 @@ public class Main extends JavaPlugin implements Listener {
     private String noServerPermission = "You don't have permission to use the %server% portal!";
     private String signIdentifier = "server";
 
-    private LoadingCache<Location, Set<Block>> portalCache;
+    private LoadingCache<Location, String> portalCache;
 
     @Override
     public void onEnable() {
@@ -142,52 +140,75 @@ public class Main extends JavaPlugin implements Listener {
             return;
         }
 
-        for (Block block : getPortalNear(event.getTo())) {
-            for (BlockFace bf : BlockFace.values()) {
-                Block relative = block.getRelative(bf);
-                if (relative.getType() == SIGN) {
-                    Sign sign = (Sign) relative.getState();
-                    if (sign.getLine(0).toLowerCase().equals("[" + signIdentifier + "]")) {
-                        Player player = event.getPlayer();
-                        teleportOutOfPortal(player);
+        String serverName = getPortalServerNear(event.getTo());
+        if (serverName != null) {
+            Player player = event.getPlayer();
 
-                        if(!player.hasPermission("janus.use")) {
-                            player.sendMessage(ChatColor.RED + noPermission);
-                            break;
-                        }
-
-                        String serverName = sign.getLine(1);
-                        if (!player.hasPermission("janus.use." + serverName.toLowerCase())) {
-                            player.sendMessage(ChatColor.RED + noServerPermission.replace("%server%", serverName));
-                            break;
-                        }
-
-                        ByteArrayOutputStream b = new ByteArrayOutputStream();
-                        DataOutputStream out = new DataOutputStream(b);
-                        try {
-                            out.writeUTF("Connect");
-                            out.writeUTF(serverName);
-                        } catch (IOException ex) {
-                            // Impossible
-                        }
-                        player.sendPluginMessage(this, "BungeeCord", b.toByteArray());
-                        break;
-                        //
-                    }
-                }
+            if(!player.hasPermission("janus.use")) {
+                player.sendMessage(ChatColor.RED + noPermission);
+                return;
             }
+
+            if (!player.hasPermission("janus.use." + serverName.toLowerCase())) {
+                player.sendMessage(ChatColor.RED + noServerPermission.replace("%server%", serverName));
+                return;
+            }
+
+            teleportOutOfPortal(player);
+
+            ByteArrayOutputStream b = new ByteArrayOutputStream();
+            DataOutputStream out = new DataOutputStream(b);
+            try {
+                out.writeUTF("Connect");
+                out.writeUTF(serverName);
+            } catch (IOException ex) {
+                // Impossible
+            }
+            player.sendPluginMessage(this, "BungeeCord", b.toByteArray());
         }
+
     }
 
-    private Set<Block> getPortalNear(Location location) {
-        Set<Block> blocks = null;
+    private String getPortalServerNear(Location location) {
         try {
-            blocks = portalCache.get(location.getBlock().getLocation());
+            return portalCache.get(location.getBlock().getLocation());
         } catch (ExecutionException e) {
             getLogger().log(Level.SEVERE, "Error while getting the portal near " + location, e);
         }
-        if (blocks == null) {
-            return new HashSet<>();
+        return null;
+    }
+
+    private Set<Block> getPortalNear(Location loc) {
+        World world = loc.getWorld();
+        int x = loc.getBlockX();
+        int y = loc.getBlockY();
+        int z = loc.getBlockZ();
+        byte b0 = 0;
+        byte b1 = 0;
+        if (world.getBlockAt(x - 1, y, z).getType() == FRAME || world.getBlockAt(x + 1, y, z).getType() == FRAME) {
+            b0 = 1;
+        }
+        if (world.getBlockAt(x, y, z - 1).getType() == FRAME || world.getBlockAt(x, y, z + 1).getType() == FRAME) {
+            b1 = 1;
+        }
+
+        Set<Block> blocks = new HashSet<>();
+
+        if (world.getBlockAt(x - b0, y, z - b1).getType() == Material.AIR) {
+            x -= b0;
+            z -= b1;
+        }
+
+        for (byte i = -1; i <= 2; ++i) {
+            for (byte j = -1; j <= 3; ++j) {
+                boolean flag = i == -1 || i == 2 || j == -1 || j == 3;
+
+                if (i != -1 && i != 2 || j != -1 && j != 3) {
+                    if (flag) {
+                        blocks.add(world.getBlockAt(x + b0 * i, y + j, z + b1 * i));
+                    }
+                }
+            }
         }
         return blocks;
     }
@@ -212,41 +233,21 @@ public class Main extends JavaPlugin implements Listener {
         player.teleport(location, TeleportCause.PLUGIN);
     }
 
-    private class PortalCacheLoader extends CacheLoader<Location, Set<Block>> {
+    private class PortalCacheLoader extends CacheLoader<Location, String> {
         @Override
-        public Set<Block> load(Location loc) throws Exception {
-            World world = loc.getWorld();
-            int x = loc.getBlockX();
-            int y = loc.getBlockY();
-            int z = loc.getBlockZ();
-            byte b0 = 0;
-            byte b1 = 0;
-            if (world.getBlockAt(x - 1, y, z).getType() == FRAME || world.getBlockAt(x + 1, y, z).getType() == FRAME) {
-                b0 = 1;
-            }
-            if (world.getBlockAt(x, y, z - 1).getType() == FRAME || world.getBlockAt(x, y, z + 1).getType() == FRAME) {
-                b1 = 1;
-            }
-
-            Set<Block> blocks = new HashSet<>();
-
-            if (world.getBlockAt(x - b0, y, z - b1).getType() == Material.AIR) {
-                x -= b0;
-                z -= b1;
-            }
-
-            for (byte i = -1; i <= 2; ++i) {
-                for (byte j = -1; j <= 3; ++j) {
-                    boolean flag = i == -1 || i == 2 || j == -1 || j == 3;
-
-                    if (i != -1 && i != 2 || j != -1 && j != 3) {
-                        if (flag) {
-                            blocks.add(world.getBlockAt(x + b0 * i, y + j, z + b1 * i));
+        public String load(Location loc) throws Exception {
+            for (Block block : getPortalNear(loc)) {
+                for (BlockFace bf : BlockFace.values()) {
+                    Block relative = block.getRelative(bf);
+                    if (relative.getType() == SIGN) {
+                        Sign sign = (Sign) relative.getState();
+                        if (sign.getLine(0).toLowerCase().equals("[" + signIdentifier + "]")) {
+                            return sign.getLine(1);
                         }
                     }
                 }
             }
-            return blocks;
+            return null;
         }
     }
 }
