@@ -28,8 +28,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.SignChangeEvent;
-import org.bukkit.event.entity.EntityPortalEnterEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -39,15 +39,14 @@ public class Main extends JavaPlugin implements Listener {
 
     private static final Material FRAME = Material.OBSIDIAN;
     private static final Material SIGN = Material.WALL_SIGN;
+    private static final Material PORTAL = Material.PORTAL;
     private boolean portalTurnPlayer = false;
     private int portalDistance = 3;
     private boolean blockMessages = false;
-    private int cooldown = 10;
     private String noPermission = "You don't have permission to use Server Portals!";
     private String noServerPermission = "You don't have permission to use the %server% portal!";
     private String signIdentifier = "server";
 
-	private Cache<UUID, Long> cooldownCache;
     private LoadingCache<Location, Set<Block>> portalCache;
 
     @Override
@@ -56,7 +55,6 @@ public class Main extends JavaPlugin implements Listener {
     }
 
     private void load() {
-        cooldownCache = CacheBuilder.newBuilder().expireAfterWrite(cooldown, TimeUnit.SECONDS).build();
         portalCache = CacheBuilder.newBuilder()
                 .maximumSize(1000)
                 .expireAfterWrite(10, TimeUnit.MINUTES)
@@ -65,7 +63,6 @@ public class Main extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         getConfig().addDefault("portalTurnPlayer", portalTurnPlayer);
         getConfig().addDefault("portalDistance", portalDistance);
-        getConfig().addDefault("cooldown", cooldown);
         getConfig().addDefault("blockMessages", blockMessages);
         getConfig().addDefault("lang.noPermission", noPermission);
         getConfig().addDefault("lang.noServerPermission", noServerPermission);
@@ -76,8 +73,6 @@ public class Main extends JavaPlugin implements Listener {
         portalTurnPlayer = getConfig().getBoolean("portalTurnPlayer");
         portalDistance = getConfig().getInt("portalDistance");
         if(portalDistance < 0) portalDistance = 0;
-        cooldown = getConfig().getInt("cooldown");
-        if(cooldown < 1) cooldown = 1;
         blockMessages = getConfig().getBoolean("blockMessages");
         noPermission = ChatColor.translateAlternateColorCodes('&', getConfig().getString("lang.noPermission"));
         noServerPermission = ChatColor.translateAlternateColorCodes('&', getConfig().getString("lang.noServerPermission"));
@@ -96,13 +91,11 @@ public class Main extends JavaPlugin implements Listener {
         } else if ("info".equalsIgnoreCase(args[0])) {
             sender.sendMessage(new String[] {
                     ChatColor.YELLOW + "Info:",
-                    ChatColor.AQUA + " cooldownCache size: " + ChatColor.YELLOW + cooldownCache.size(),
                     ChatColor.AQUA + " portalCache size: " + ChatColor.YELLOW + portalCache.size(),
                     ChatColor.YELLOW + "Config:",
                     ChatColor.AQUA + " portalTurnPlayer: " + ChatColor.YELLOW + portalTurnPlayer,
                     ChatColor.AQUA + " portalDistance: " + ChatColor.YELLOW + portalDistance,
                     ChatColor.AQUA + " blockMessages: " + ChatColor.YELLOW + blockMessages,
-                    ChatColor.AQUA + " cooldown : " + ChatColor.YELLOW + cooldown ,
                     ChatColor.AQUA + " noPermission: " + ChatColor.YELLOW + noPermission,
                     ChatColor.AQUA + " noServerPermission: " + ChatColor.YELLOW + noServerPermission,
                     ChatColor.AQUA + " signIdentifier: " + ChatColor.YELLOW + signIdentifier
@@ -117,8 +110,7 @@ public class Main extends JavaPlugin implements Listener {
         if (blockMessages) {
             event.setJoinMessage(null);
         }
-        cooldownCache.put(event.getPlayer().getUniqueId(), System.currentTimeMillis());
-        if (event.getPlayer().getLocation().getBlock().getType() == Material.PORTAL) {
+        if (event.getPlayer().getLocation().getBlock().getType() == PORTAL) {
             teleportOutOfPortal(event.getPlayer());
         }
     }
@@ -138,26 +130,25 @@ public class Main extends JavaPlugin implements Listener {
         }
     }
 
-    @EventHandler
-    public void onPlayerPortalEnter(EntityPortalEnterEvent event) {
-    	if(!(event.getEntity() instanceof Player)) {
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerPortalEnter(PlayerMoveEvent event) {
+        if (event.getFrom().getBlock() == event.getTo().getBlock()) {
+            // Player didn't switch block
             return;
         }
 
-        Player player = (Player) event.getEntity();
-        int playerCooldown = player.hasPermission("janus.bypass") ? 1 : cooldown;
-        if (cooldownCache.getIfPresent(player.getUniqueId()) != null
-                && cooldownCache.getIfPresent(player.getUniqueId()) + playerCooldown * 1000 > System.currentTimeMillis()) {
+        if (event.getTo().getBlock().getType() != PORTAL) {
+            // Player didn't move into portal
             return;
         }
 
-        for (Block block : getPortalNear(event.getLocation())) {
+        for (Block block : getPortalNear(event.getTo())) {
             for (BlockFace bf : BlockFace.values()) {
                 Block relative = block.getRelative(bf);
                 if (relative.getType() == SIGN) {
                     Sign sign = (Sign) relative.getState();
                     if (sign.getLine(0).toLowerCase().equals("[" + signIdentifier + "]")) {
-                        cooldownCache.put(player.getUniqueId(), System.currentTimeMillis());
+                        Player player = event.getPlayer();
                         teleportOutOfPortal(player);
 
                         if(!player.hasPermission("janus.use")) {
