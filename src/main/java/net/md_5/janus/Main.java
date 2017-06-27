@@ -173,9 +173,8 @@ public class Main extends JavaPlugin implements Listener {
         try {
             return portalCache.get(location.getBlock().getLocation());
         } catch (ExecutionException e) {
-            getLogger().log(Level.SEVERE, "Error while getting the portal near " + location, e);
+            return null;
         }
-        return null;
     }
 
     private Set<Block> getPortalNear(Location loc) {
