@@ -8,7 +8,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -36,8 +35,7 @@ import org.bukkit.util.Vector;
 public class Main extends JavaPlugin implements Listener {
 
     private static final Material FRAME = Material.OBSIDIAN;
-    private static final Material SIGN = Material.WALL_SIGN;
-    private static final Material PORTAL = Material.PORTAL;
+    private static final Material PORTAL = Material.NETHER_PORTAL;
     private boolean portalTurnPlayer = false;
     private int portalDistance = 3;
     private boolean blockMessages = false;
@@ -238,7 +236,7 @@ public class Main extends JavaPlugin implements Listener {
             for (Block block : getPortalNear(loc)) {
                 for (BlockFace bf : BlockFace.values()) {
                     Block relative = block.getRelative(bf);
-                    if (relative.getType() == SIGN) {
+                    if (relative.getBlockData() instanceof org.bukkit.block.data.type.Sign) {
                         Sign sign = (Sign) relative.getState();
                         if (sign.getLine(0).toLowerCase().equals("[" + signIdentifier + "]")) {
                             return sign.getLine(1);
