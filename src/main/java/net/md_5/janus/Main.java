@@ -236,7 +236,7 @@ public class Main extends JavaPlugin implements Listener {
             for (Block block : getPortalNear(loc)) {
                 for (BlockFace bf : BlockFace.values()) {
                     Block relative = block.getRelative(bf);
-                    if (relative.getBlockData() instanceof org.bukkit.block.data.type.Sign) {
+                    if (relative.getBlockData() instanceof org.bukkit.block.data.type.WallSign) {
                         Sign sign = (Sign) relative.getState();
                         if (sign.getLine(0).toLowerCase().equals("[" + signIdentifier + "]")) {
                             return sign.getLine(1);
